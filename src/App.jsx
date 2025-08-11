@@ -56,6 +56,8 @@ function App() {
   const [autoScrollSpeed, setAutoScrollSpeed] = useState(30); // px per second
   const autoScrollSpeedRef = useRef(autoScrollSpeed);
   const [showSpeedSlider, setShowSpeedSlider] = useState(false);
+  const [speedSliderFade, setSpeedSliderFade] = useState(false);
+  const speedSliderTimeoutRef = useRef();
 
   useEffect(() => {
     autoScrollSpeedRef.current = autoScrollSpeed;
@@ -99,6 +101,8 @@ function App() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuFade, setMenuFade] = useState(false);
+  const menuTimeoutRef = useRef();
   const [collapseBlue, setCollapseBlue] = useState(false);
   const [collapsePurple, setCollapsePurple] = useState(false);
   const [showNames, setShowNames] = useState(true);
@@ -136,47 +140,27 @@ function App() {
       />
       <br />
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
-        <div style={{ position: 'relative', marginRight: 12 }}>
-          <button
-            aria-label="Menu"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}
-            onClick={() => setMenuOpen(m => !m)}
-          >
-            <span style={{ display: 'inline-block', width: 24, height: 24 }}>
-              <span style={{ display: 'block', width: 24, height: 3, background: '#888', margin: '4px 0', borderRadius: 2 }}></span>
-              <span style={{ display: 'block', width: 24, height: 3, background: '#888', margin: '4px 0', borderRadius: 2 }}></span>
-              <span style={{ display: 'block', width: 24, height: 3, background: '#888', margin: '4px 0', borderRadius: 2 }}></span>
-            </span>
-          </button>
-          {menuOpen && (
-            <div style={{ position: 'absolute', left: 0, top: 32, background: '#fff', border: '1px solid #ddd', borderRadius: 8, boxShadow: '0 2px 8px #0001', zIndex: 10, minWidth: 180 }}>
-              <button
-                style={{ display: 'block', width: '100%', background: 'none', border: 'none', padding: '10px 16px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '1em', color: '#111' }}
-                onClick={() => { setCollapseBlue(v => !v); setMenuOpen(false); }}
-              >Toggle blue bubbles</button>
-              <button
-                style={{ display: 'block', width: '100%', background: 'none', border: 'none', padding: '10px 16px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '1em', color: '#111' }}
-                onClick={() => { setCollapsePurple(v => !v); setMenuOpen(false); }}
-              >Toggle purple bubbles</button>
-              <button
-                style={{ display: 'block', width: '100%', background: 'none', border: 'none', padding: '10px 16px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '1em', color: '#111' }}
-                onClick={() => { setShowNames(s => !s); setMenuOpen(false); }}
-              >Toggle names</button>
-              <button
-                style={{ display: 'block', width: '100%', background: 'none', border: 'none', padding: '10px 16px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '1em', color: '#111' }}
-                onClick={() => { setCollapseBlue(false); setCollapsePurple(false); setMenuOpen(false); }}
-              >Expand all</button>
-            </div>
-          )}
-        </div>
         <button onClick={handleParse}>Parse Chat</button>
-        <div style={{ position: 'relative', display: 'inline-block' }}
-          onMouseEnter={() => setShowSpeedSlider(true)}
-          onMouseLeave={() => setShowSpeedSlider(false)}
+      </div>
+      {/* Fixed top-right controls */}
+      <div style={{ position: 'fixed', top: 24, right: 32, zIndex: 1000, display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div
+          style={{ position: 'relative', display: 'inline-block', minWidth: 0 }}
+          onMouseEnter={() => {
+            if (speedSliderTimeoutRef.current) clearTimeout(speedSliderTimeoutRef.current);
+            setSpeedSliderFade(false);
+            setShowSpeedSlider(true);
+          }}
+          onMouseLeave={() => {
+            speedSliderTimeoutRef.current = setTimeout(() => {
+              setSpeedSliderFade(true);
+              setTimeout(() => setShowSpeedSlider(false), 200);
+            }, 500);
+          }}
         >
           <button
             style={{
-              marginLeft: 12,
+              marginLeft: 0,
               background: autoScrollOn ? '#22c55e' : '#111',
               color: '#fff',
               border: 'none',
@@ -186,29 +170,46 @@ function App() {
               fontFamily: 'inherit',
               cursor: 'pointer',
               fontWeight: 500,
-              transition: 'background 0.2s'
+              transition: 'background 0.2s',
+              boxShadow: '0 2px 8px #0003'
             }}
             onClick={toggleAutoScroll}
           >Auto-Scroll</button>
           {showSpeedSlider && (
-            <div style={{
-              position: 'absolute',
-              left: 0,
-              top: '110%',
-              background: '#222',
-              padding: '12px 18px 10px 18px',
-              borderRadius: 10,
-              boxShadow: '0 2px 8px #0005',
-              zIndex: 20,
-              minWidth: 180,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              color: '#fff',
-              fontSize: '0.98em',
-              fontFamily: 'inherit',
-              fontWeight: 500
-            }}>
+            <div
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: '110%',
+                transform: 'translateX(-50%)',
+                background: '#222',
+                padding: '12px 18px 10px 18px',
+                borderRadius: 10,
+                boxShadow: '0 2px 8px #0005',
+                zIndex: 20,
+                minWidth: 180,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                color: '#fff',
+                fontSize: '0.98em',
+                fontFamily: 'inherit',
+                fontWeight: 500,
+                opacity: speedSliderFade ? 0 : 1,
+                transition: 'opacity 0.18s'
+              }}
+              onMouseEnter={() => {
+                if (speedSliderTimeoutRef.current) clearTimeout(speedSliderTimeoutRef.current);
+                setSpeedSliderFade(false);
+                setShowSpeedSlider(true);
+              }}
+              onMouseLeave={() => {
+                speedSliderTimeoutRef.current = setTimeout(() => {
+                  setSpeedSliderFade(true);
+                  setTimeout(() => setShowSpeedSlider(false), 200);
+                }, 500);
+              }}
+            >
               <label htmlFor="scroll-speed-slider" style={{ marginBottom: 6 }}>Scroll Speed: {autoScrollSpeed} px/sec</label>
               <input
                 id="scroll-speed-slider"
@@ -219,6 +220,95 @@ function App() {
                 onChange={e => setAutoScrollSpeed(Number(e.target.value))}
                 style={{ width: 120 }}
               />
+            </div>
+          )}
+        </div>
+        <div
+          style={{ position: 'relative', display: 'inline-block' }}
+          onMouseEnter={() => {
+            if (menuTimeoutRef.current) clearTimeout(menuTimeoutRef.current);
+            setMenuFade(false);
+            setMenuOpen(true);
+          }}
+          onMouseLeave={() => {
+            menuTimeoutRef.current = setTimeout(() => {
+              setMenuFade(true);
+              setTimeout(() => setMenuOpen(false), 200);
+            }, 500);
+          }}
+        >
+          <button
+            aria-label="Menu"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}
+          >
+            <span style={{ display: 'inline-block', width: 24, height: 24 }}>
+              <span style={{ display: 'block', width: 24, height: 3, background: '#888', margin: '4px 0', borderRadius: 2 }}></span>
+              <span style={{ display: 'block', width: 24, height: 3, background: '#888', margin: '4px 0', borderRadius: 2 }}></span>
+              <span style={{ display: 'block', width: 24, height: 3, background: '#888', margin: '4px 0', borderRadius: 2 }}></span>
+            </span>
+          </button>
+          {menuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: '110%',
+                background: '#222',
+                padding: '12px 18px 10px 18px',
+                borderRadius: 10,
+                boxShadow: '0 2px 8px #0005',
+                zIndex: 20,
+                minWidth: 180,
+                maxWidth: 320,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'stretch',
+                color: '#fff',
+                fontSize: '0.98em',
+                fontFamily: 'inherit',
+                fontWeight: 500,
+                whiteSpace: 'normal',
+                overflowWrap: 'break-word',
+                textAlign: 'left',
+                opacity: menuFade ? 0 : 1,
+                transition: 'opacity 0.18s'
+              }}
+              onMouseEnter={() => {
+                if (menuTimeoutRef.current) clearTimeout(menuTimeoutRef.current);
+                setMenuFade(false);
+                setMenuOpen(true);
+              }}
+              onMouseLeave={() => {
+                menuTimeoutRef.current = setTimeout(() => {
+                  setMenuFade(true);
+                  setTimeout(() => setMenuOpen(false), 200);
+                }, 2000);
+              }}
+            >
+              <button
+                style={{ display: 'block', width: '100%', background: 'none', border: 'none', padding: '10px 0', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '1em', color: '#fff', borderRadius: 6, transition: 'background 0.2s' }}
+                onMouseOver={e => e.currentTarget.style.background = '#333'}
+                onMouseOut={e => e.currentTarget.style.background = 'none'}
+                onClick={() => { setCollapseBlue(v => !v); setMenuOpen(false); }}
+              >Toggle blue bubbles</button>
+              <button
+                style={{ display: 'block', width: '100%', background: 'none', border: 'none', padding: '10px 0', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '1em', color: '#fff', borderRadius: 6, transition: 'background 0.2s' }}
+                onMouseOver={e => e.currentTarget.style.background = '#333'}
+                onMouseOut={e => e.currentTarget.style.background = 'none'}
+                onClick={() => { setCollapsePurple(v => !v); setMenuOpen(false); }}
+              >Toggle purple bubbles</button>
+              <button
+                style={{ display: 'block', width: '100%', background: 'none', border: 'none', padding: '10px 0', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '1em', color: '#fff', borderRadius: 6, transition: 'background 0.2s' }}
+                onMouseOver={e => e.currentTarget.style.background = '#333'}
+                onMouseOut={e => e.currentTarget.style.background = 'none'}
+                onClick={() => { setShowNames(s => !s); setMenuOpen(false); }}
+              >Toggle names</button>
+              <button
+                style={{ display: 'block', width: '100%', background: 'none', border: 'none', padding: '10px 0', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '1em', color: '#fff', borderRadius: 6, transition: 'background 0.2s' }}
+                onMouseOver={e => e.currentTarget.style.background = '#333'}
+                onMouseOut={e => e.currentTarget.style.background = 'none'}
+                onClick={() => { setCollapseBlue(false); setCollapsePurple(false); setMenuOpen(false); }}
+              >Expand all</button>
             </div>
           )}
         </div>

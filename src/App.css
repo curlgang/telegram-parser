@@ -42,7 +42,7 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   color: #222;
   position: relative;
-  max-width: 98%;
+  max-width: 800px;
   width: 98%;
   font-family: 'Roboto', Arial, sans-serif;
   font-size: 1.08em;
@@ -52,6 +52,7 @@
   text-shadow: none;
   word-break: break-word;
   transition: box-shadow 0.2s;
+  overflow-wrap: break-word;
 }
 .chat-bubble.left {
   margin-left: 0;
