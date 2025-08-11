@@ -5,7 +5,10 @@ function parseTelegram(text) {
   const lines = text.split(/\r?\n/);
   const messages = [];
   let current = null;
-  const headerRegex = /^([^,]+), \[(.+?)\]:$/;
+  // Support both Telegram and Telegram Lite timestamp formats
+  // Telegram: Name, [Aug 10, 2025 at 12:43:22 PM]:
+  // Telegram Lite: Name, [8/10/25 2:27 AM]
+  const headerRegex = /^([^,]+), \[(.+?)\](?::)?$/;
   for (let line of lines) {
     const headerMatch = line.match(headerRegex);
     if (headerMatch) {

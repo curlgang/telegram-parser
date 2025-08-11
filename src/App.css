@@ -66,7 +66,7 @@
   color: #fff;
 }
 .chat-bubble.right {
-  margin-right: 0;
+  margin-right: 0px;
   margin-left: 20px;
   text-align: right;
   background: linear-gradient(135deg, #0a234b 0%, #17406a 100%);
