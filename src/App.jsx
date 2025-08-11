@@ -52,6 +52,43 @@ function ChatBubble({ sender, timestamp, text, collapsed, showNames }) {
 }
 
 function App() {
+  // Toggle auto-scroll logic extracted for reuse
+  function toggleAutoScroll() {
+    if (window.__autoScrollRAF) {
+      cancelAnimationFrame(window.__autoScrollRAF);
+      window.__autoScrollRAF = null;
+      window.__autoScrollLast = null;
+      window.__autoScrollRemainder = null;
+      setAutoScrollOn(false);
+    } else {
+      const speed = 30; // px per second
+      window.__autoScrollRemainder = 0;
+      function step(ts) {
+        if (!window.__autoScrollLast) window.__autoScrollLast = ts;
+        const elapsed = ts - window.__autoScrollLast;
+        let px = (speed * elapsed) / 1000 + (window.__autoScrollRemainder || 0);
+        const pxInt = Math.floor(px);
+        window.__autoScrollRemainder = px - pxInt;
+        if (pxInt > 0) window.scrollBy(0, pxInt);
+        window.__autoScrollLast = ts;
+        window.__autoScrollRAF = requestAnimationFrame(step);
+      }
+      window.__autoScrollRAF = requestAnimationFrame(step);
+      setAutoScrollOn(true);
+    }
+  }
+
+  useEffect(() => {
+    function handleSpace(e) {
+      if (e.code === 'Space' && !e.repeat && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'INPUT') {
+        e.preventDefault();
+        toggleAutoScroll();
+      }
+    }
+    window.addEventListener('keydown', handleSpace);
+    return () => window.removeEventListener('keydown', handleSpace);
+  }, []);
+  const [autoScrollOn, setAutoScrollOn] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -126,6 +163,22 @@ function App() {
           )}
         </div>
         <button onClick={handleParse}>Parse Chat</button>
+        <button
+          style={{
+            marginLeft: 12,
+            background: autoScrollOn ? '#22c55e' : '#111',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 6,
+            padding: '8px 18px',
+            fontSize: '1em',
+            fontFamily: 'inherit',
+            cursor: 'pointer',
+            fontWeight: 500,
+            transition: 'background 0.2s'
+          }}
+          onClick={toggleAutoScroll}
+        >Auto-Scroll</button>
       </div>
       <div>
         {messages.map((msg, idx) => {
