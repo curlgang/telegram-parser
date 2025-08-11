@@ -52,6 +52,128 @@ function ChatBubble({ sender, timestamp, text, collapsed, showNames }) {
 }
 
 function App() {
+  // Track current narration position for resume on voice change
+  const [narrationCharIndex, setNarrationCharIndex] = useState(0);
+  const narrationTextRef = useRef('');
+  // Narration logic
+  // Narration state and logic
+  const [narrating, setNarrating] = useState(false);
+  const [narrationPaused, setNarrationPaused] = useState(false);
+  const [voices, setVoices] = useState([]);
+  const [selectedVoice, setSelectedVoice] = useState(null);
+  const [voiceStack, setVoiceStack] = useState([]); // stack of voiceURIs, top is selected
+  const [showVoiceList, setShowVoiceList] = useState(false);
+  const [voiceListFade, setVoiceListFade] = useState(false);
+  const voiceListTimeoutRef = useRef();
+  const utterRef = useRef(null);
+
+  // Load voices on mount
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
+    function updateVoices() {
+      const v = window.speechSynthesis.getVoices();
+      setVoices(v);
+      // Set default voice and stack if not set
+      if (!selectedVoice && v.length > 0) {
+        setSelectedVoice(v[0].voiceURI);
+        setVoiceStack([v[0].voiceURI, ...v.filter(voice => voice.voiceURI !== v[0].voiceURI).map(voice => voice.voiceURI)]);
+      } else if (selectedVoice && v.length > 0) {
+        // Ensure stack is in sync with available voices
+        setVoiceStack(stack => {
+          // Remove any voices not in v
+          const availableURIs = v.map(voice => voice.voiceURI);
+          let filtered = stack.filter(uri => availableURIs.includes(uri));
+          // Add any new voices to the end
+          v.forEach(voice => {
+            if (!filtered.includes(voice.voiceURI)) filtered.push(voice.voiceURI);
+          });
+          // Ensure selectedVoice is at the top
+          if (filtered[0] !== selectedVoice) {
+            filtered = [selectedVoice, ...filtered.filter(uri => uri !== selectedVoice)];
+          }
+          return filtered;
+        });
+      }
+    }
+    updateVoices();
+    window.speechSynthesis.onvoiceschanged = updateVoices;
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+    // eslint-disable-next-line
+  }, []);
+
+  function handleNarrateClick() {
+    if (!('speechSynthesis' in window)) {
+      alert('Sorry, your browser does not support speech synthesis.');
+      return;
+    }
+    // If currently narrating and not paused, stop narration and reset button color
+    if (narrating && !narrationPaused) {
+      window.speechSynthesis.cancel();
+      setNarrating(false);
+      setNarrationPaused(false);
+      return;
+    }
+    // If paused, resume
+    if (narrating && narrationPaused) {
+      window.speechSynthesis.resume();
+      setNarrationPaused(false);
+      return;
+    }
+    // If not narrating, start from beginning
+    window.speechSynthesis.cancel();
+    // Only narrate visible messages (not collapsed)
+    const narrateMessages = messages.filter(msg => {
+      const hide = (isFirstUser(msg.sender) && collapsePurple) || (!isFirstUser(msg.sender) && collapseBlue);
+      return !hide;
+    });
+    if (narrateMessages.length === 0) return;
+    const narrationText = narrateMessages.map(msg =>
+      (showNames ? `${msg.sender} says: ` : '') + msg.text
+    ).join('. ');
+    narrationTextRef.current = narrationText;
+    setNarrationCharIndex(0);
+    const utter = new window.SpeechSynthesisUtterance(narrationText);
+    utter.rate = 1;
+    utter.pitch = 1;
+    utter.volume = 1;
+    // Set selected voice
+    if (voices && voices.length > 0 && selectedVoice) {
+      const v = voices.find(v => v.voiceURI === selectedVoice);
+      if (v) utter.voice = v;
+    }
+    utter.onstart = () => {
+      setNarrating(true);
+      setNarrationPaused(false);
+    };
+    utter.onend = () => {
+      setNarrating(false);
+      setNarrationPaused(false);
+      utterRef.current = null;
+      setNarrationCharIndex(0);
+    };
+    utter.onerror = () => {
+      setNarrating(false);
+      setNarrationPaused(false);
+      utterRef.current = null;
+      setNarrationCharIndex(0);
+    };
+    utter.onboundary = e => {
+      if (e.name === 'word' || e.name === 'sentence') {
+        setNarrationCharIndex(e.charIndex);
+      }
+    };
+    utterRef.current = utter;
+    window.speechSynthesis.speak(utter);
+  }
+
+  // If user starts another narration, cancel previous
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, []);
   // Toggle auto-scroll logic extracted for reuse
   const [autoScrollSpeed, setAutoScrollSpeed] = useState(30); // px per second
   const autoScrollSpeedRef = useRef(autoScrollSpeed);
@@ -144,6 +266,142 @@ function App() {
       </div>
       {/* Fixed top-right controls */}
       <div style={{ position: 'fixed', top: 24, right: 32, zIndex: 1000, display: 'flex', alignItems: 'center', gap: 16 }}>
+      {/* Narrate button and voice list in shared container with fade logic */}
+      <div
+        style={{ position: 'relative', display: 'inline-block' }}
+        onMouseEnter={() => {
+          if (voiceListTimeoutRef.current) clearTimeout(voiceListTimeoutRef.current);
+          setVoiceListFade(false);
+          setShowVoiceList(true);
+        }}
+        onMouseLeave={() => {
+          voiceListTimeoutRef.current = setTimeout(() => {
+            setVoiceListFade(true);
+            setTimeout(() => setShowVoiceList(false), 200);
+          }, 500);
+        }}
+      >
+        <button
+          style={{
+            background: narrating ? '#22c55e' : '#111',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 6,
+            padding: '8px 18px',
+            fontSize: '1em',
+            fontFamily: 'inherit',
+            cursor: 'pointer',
+            fontWeight: 500,
+            transition: 'background 0.2s',
+            boxShadow: '0 2px 8px #0003'
+          }}
+          onClick={handleNarrateClick}
+          title={'Narrate all visible chat messages'}
+        >
+          Narrate
+        </button>
+        {showVoiceList && voices.length > 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '110%',
+              transform: 'translateX(-50%)',
+              background: '#222',
+              padding: '12px 18px 10px 18px',
+              borderRadius: 10,
+              boxShadow: '0 2px 8px #0005',
+              zIndex: 30,
+              minWidth: 220,
+              maxHeight: 320,
+              overflowY: 'auto',
+              color: '#fff',
+              fontSize: '0.98em',
+              fontFamily: 'inherit',
+              fontWeight: 500,
+              whiteSpace: 'normal',
+              textAlign: 'left',
+              marginTop: 4,
+              opacity: voiceListFade ? 0 : 1,
+              transition: 'opacity 0.18s'
+            }}
+            onMouseEnter={() => {
+              if (voiceListTimeoutRef.current) clearTimeout(voiceListTimeoutRef.current);
+              setVoiceListFade(false);
+              setShowVoiceList(true);
+            }}
+            onMouseLeave={() => {
+              voiceListTimeoutRef.current = setTimeout(() => {
+                setVoiceListFade(true);
+                setTimeout(() => setShowVoiceList(false), 200);
+              }, 500);
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>Select Narrator:</div>
+            {voiceStack
+              .map(uri => voices.find(v => v.voiceURI === uri))
+              .filter(Boolean)
+              .map(voice => (
+                <div
+                  key={voice.voiceURI}
+                  style={{
+                    padding: '6px 0',
+                    cursor: 'pointer',
+                    background: selectedVoice === voice.voiceURI ? '#333' : 'none',
+                    borderRadius: 6,
+                    marginBottom: 2
+                  }}
+                  onClick={() => {
+                    // Move selected voice to top of stack
+                    setVoiceStack(stack => [voice.voiceURI, ...stack.filter(uri => uri !== voice.voiceURI)]);
+                    setSelectedVoice(voice.voiceURI);
+                    if (narrating || narrationPaused) {
+                      window.speechSynthesis.cancel();
+                      // Resume from current char index
+                      const text = narrationTextRef.current;
+                      const start = narrationCharIndex;
+                      const resumeText = text.slice(start);
+                      if (!resumeText.trim()) return;
+                      const utter = new window.SpeechSynthesisUtterance(resumeText);
+                      utter.rate = 1;
+                      utter.pitch = 1;
+                      utter.volume = 1;
+                      const v = voices.find(v => v.voiceURI === voice.voiceURI);
+                      if (v) utter.voice = v;
+                      utter.onstart = () => {
+                        setNarrating(true);
+                        setNarrationPaused(false);
+                      };
+                      utter.onend = () => {
+                        setNarrating(false);
+                        setNarrationPaused(false);
+                        utterRef.current = null;
+                        setNarrationCharIndex(0);
+                      };
+                      utter.onerror = () => {
+                        setNarrating(false);
+                        setNarrationPaused(false);
+                        utterRef.current = null;
+                        setNarrationCharIndex(0);
+                      };
+                      utter.onboundary = e => {
+                        if (e.name === 'word' || e.name === 'sentence') {
+                          setNarrationCharIndex(start + e.charIndex);
+                        }
+                      };
+                      utterRef.current = utter;
+                      window.speechSynthesis.speak(utter);
+                    }
+                  }}
+                  title={voice.lang + (voice.default ? ' (default)' : '')}
+                >
+                  {voice.name} <span style={{ fontSize: '0.9em', color: '#aaa' }}>({voice.lang})</span>
+                  {voice.default && <span style={{ color: '#22c55e', marginLeft: 6 }}>(default)</span>}
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
         <div
           style={{ position: 'relative', display: 'inline-block', minWidth: 0 }}
           onMouseEnter={() => {
