@@ -1,5 +1,9 @@
 # React + Vite
 
+Locally run web app that lets you paste telegram conversations and collapse chat bubbles for better readability.
+
+# React + Vite
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
