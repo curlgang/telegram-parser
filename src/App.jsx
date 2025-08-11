@@ -125,18 +125,18 @@ function App() {
         <button onClick={handleParse}>Parse Chat</button>
       </div>
       <div>
-        {messages.map((msg, idx) => (
-          <ChatBubble
-            key={idx}
-            {...msg}
-            collapsed={
-              (isFirstUser(msg.sender) && collapsePurple) ||
-              (!isFirstUser(msg.sender) && collapseBlue)
-            }
-            showNames={showNames}
-            isFirstUser={isFirstUser(msg.sender)}
-          />
-        ))}
+        {messages.map((msg, idx) => {
+          const hide = (isFirstUser(msg.sender) && collapsePurple) || (!isFirstUser(msg.sender) && collapseBlue);
+          if (hide) return null;
+          return (
+            <ChatBubble
+              key={idx}
+              {...msg}
+              showNames={showNames}
+              isFirstUser={isFirstUser(msg.sender)}
+            />
+          );
+        })}
       </div>
     </div>
   );
