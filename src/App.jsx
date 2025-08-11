@@ -25,9 +25,8 @@ function parseTelegram(text) {
 }
 
 function ChatBubble({ sender, timestamp, text, collapsed, showNames }) {
-  // Assign color and alignment based on sender
-  const isFirstUser = sender === 'Yeen/Sparx'; // You can improve this logic as needed
-  const bubbleClass = `chat-bubble ${isFirstUser ? 'purple left' : 'blue right'}`;
+  // Assign color and alignment based on sender (isFirstUser is passed as a prop)
+  const bubbleClass = `chat-bubble ${arguments[0].isFirstUser ? 'purple left' : 'blue right'}`;
 
   if (collapsed) {
     return (
@@ -67,8 +66,16 @@ function App() {
     setCollapsePurple(false);
   };
 
-  // For demo: blue = right, purple = left
-  const isFirstUser = sender => sender === 'Yeen/Sparx';
+  // Assign user1 to the sender of the first message, user2 to the sender of the next message with a different name
+  let user1 = null, user2 = null;
+  for (const msg of messages) {
+    if (!user1) user1 = msg.sender;
+    else if (!user2 && msg.sender !== user1) {
+      user2 = msg.sender;
+      break;
+    }
+  }
+  const isFirstUser = sender => sender === user1;
 
   return (
     <div>
@@ -127,6 +134,7 @@ function App() {
               (!isFirstUser(msg.sender) && collapseBlue)
             }
             showNames={showNames}
+            isFirstUser={isFirstUser(msg.sender)}
           />
         ))}
       </div>
