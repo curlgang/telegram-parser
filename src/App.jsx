@@ -24,9 +24,8 @@ function parseTelegram(text) {
   return messages.filter(m => m.text.trim() !== '');
 }
 
-function ChatBubble({ sender, timestamp, text, collapsed, showNames }) {
-  // Assign color and alignment based on sender
-  const isFirstUser = sender === 'Yeen/Sparx'; // You can improve this logic as needed
+function ChatBubble({ sender, timestamp, text, collapsed, showNames, fontSize, isFirstUser }) {
+  // Assign color and alignment based on sender (isFirstUser now comes from App)
   const bubbleClass = `chat-bubble ${isFirstUser ? 'purple left' : 'blue right'}`;
 
   if (collapsed) {
@@ -38,13 +37,24 @@ function ChatBubble({ sender, timestamp, text, collapsed, showNames }) {
   }
 
   return (
-    <div className={bubbleClass}>
+    <div
+      className={bubbleClass}
+      style={{
+        minHeight: 48,
+        maxWidth: 520,
+        width: 'fit-content',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+      }}
+    >
       {showNames && (
         <div className="chat-header">
           <strong>{sender}</strong> <span className="chat-time">[{timestamp}]</span>
         </div>
       )}
-      <div className="chat-text">{text.split('\n').map((l,i) => <div key={i}>{l}</div>)}</div>
+      <div className="chat-text" style={{ fontSize: fontSize + 'em', lineHeight: 1.4, wordBreak: 'break-word' }}>{text.split('\n').map((l,i) => <div key={i}>{l}</div>)}</div>
     </div>
   );
 }
@@ -55,7 +65,8 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapseBlue, setCollapseBlue] = useState(false);
   const [collapsePurple, setCollapsePurple] = useState(false);
-  const [showNames, setShowNames] = useState(true);
+  const [showNames, setShowNames] = useState(false); // default to false
+  const [fontSize, setFontSize] = useState(1); // em units
 
   useEffect(() => {
     document.title = 'Telegram Chat Parser';
@@ -65,10 +76,19 @@ function App() {
     setMessages(parseTelegram(input));
     setCollapseBlue(false);
     setCollapsePurple(false);
+    setShowNames(false); // reset to default on parse
   };
 
-  // For demo: blue = right, purple = left
-  const isFirstUser = sender => sender === 'Yeen/Sparx';
+  // Assign user1 to the sender of the first message, user2 to the sender of the next message with a different name
+  let user1 = null, user2 = null;
+  for (const msg of messages) {
+    if (!user1) user1 = msg.sender;
+    else if (!user2 && msg.sender !== user1) {
+      user2 = msg.sender;
+      break;
+    }
+  }
+  const isFirstUser = sender => sender === user1;
 
   return (
     <div>
@@ -115,20 +135,75 @@ function App() {
             </div>
           )}
         </div>
-        <button onClick={handleParse}>Parse Chat</button>
+        <button 
+          onClick={handleParse}
+          style={{
+            background: 'linear-gradient(90deg, #6a5af9 0%, #8f6ed5 100%)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            padding: '8px 20px',
+            fontSize: '1.08em',
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px #0001',
+            marginRight: 8
+          }}
+        >Parse Chat</button>
+        <button
+          aria-label="Increase font size"
+          style={{
+            background: 'linear-gradient(90deg, #6a5af9 0%, #8f6ed5 100%)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            padding: '8px 20px',
+            fontSize: '1.08em',
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px #0001',
+            marginRight: 8
+          }}
+          onClick={() => setFontSize(f => Math.min(f + 0.1, 2))}
+        >+
+        </button>
+        <button
+          aria-label="Decrease font size"
+          style={{
+            background: 'linear-gradient(90deg, #6a5af9 0%, #8f6ed5 100%)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            padding: '8px 20px',
+            fontSize: '1.08em',
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px #0001',
+            marginRight: 0
+          }}
+          onClick={() => setFontSize(f => Math.max(f - 0.1, 0.7))}
+        >-
+        </button>
       </div>
-      <div>
-        {messages.map((msg, idx) => (
-          <ChatBubble
-            key={idx}
-            {...msg}
-            collapsed={
-              (isFirstUser(msg.sender) && collapsePurple) ||
-              (!isFirstUser(msg.sender) && collapseBlue)
+      <div style={{ marginTop: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {messages.map((msg, idx) => {
+            const firstUser = isFirstUser(msg.sender);
+            if ((firstUser && collapsePurple) || (!firstUser && collapseBlue)) {
+              return null; // hide bubble
             }
-            showNames={showNames}
-          />
-        ))}
+            return (
+              <ChatBubble
+                key={idx}
+                {...msg}
+                collapsed={false}
+                showNames={showNames}
+                fontSize={fontSize}
+                isFirstUser={isFirstUser(msg.sender)}
+              />
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -41,7 +41,7 @@
   margin: 6px 0;
   padding: 10px 24px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  color: #222;
+  color: #fff;
   position: relative;
   max-width: 98%;
   width: 98%;
@@ -58,7 +58,7 @@
   margin-left: 0;
   margin-right: 20px;
   text-align: left;
-  background: linear-gradient(135deg, #ede9fe 0%, #a78bfa 100%);
+  background: linear-gradient(135deg, #3a2257 0%, #6d28d9 100%);
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
   border-bottom-right-radius: 16px;
@@ -68,7 +68,7 @@
   margin-right: 0;
   margin-left: 20px;
   text-align: right;
-  background: linear-gradient(135deg, #e0f2fe 0%, #60a5fa 100%);
+  background: linear-gradient(135deg, #1e293b 0%, #2563eb 100%);
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
   border-bottom-left-radius: 16px;
@@ -117,7 +117,7 @@
   margin-top: 2px;
   white-space: pre-line;
   font-size: 1.08em;
-  color: #222;
+  color: #fff;
   font-family: 'Roboto', Arial, sans-serif;
   font-weight: bold;
 }
